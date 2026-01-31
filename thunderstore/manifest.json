@@ -1,0 +1,7 @@
+{
+    "name": "bk_recomp_asset_expansion_pak",
+    "version_number": "0.0.2",
+    "website_url": "https://github.com/DarioSamo/BKRecompAssetExpansionPak",
+    "description": "Expand the game's asset memory system.",
+    "dependencies": []
+}
