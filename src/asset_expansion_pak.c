@@ -122,8 +122,6 @@ void *bk_recomp_aep_realloc(void *ptr, s32 size) {
 
 // @mod Modded to skip asset extraction and return the in-memory replacement if it exists.
 RECOMP_PATCH void *assetcache_get(enum asset_e assetId) {
-    //recomp_printf("assetCacheLength %d\n", assetCacheLength);
-
     // @mod If a replacement was made for this asset by another mod, return it instead of extracting it from the game.
     if (asset_replacements_indices[assetId] < MAX_ASSETS) {
         u16 replacement_index = asset_replacements_indices[assetId];
