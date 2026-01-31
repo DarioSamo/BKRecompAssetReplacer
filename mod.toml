@@ -21,7 +21,7 @@ Experimental mod that rewrites the asset management system of the game to allow 
 It also extends the game's asset system to use a much bigger allocation heap.
 
 o1heap - Copyright (c) 2020 Pavel Kirienko
-""""
+"""
 
 # A short description that will show up in this mod's entry in the mod list. This should be human readable and kept short
 # to prevent it from being cut off due to the limited space.
