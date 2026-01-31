@@ -6,20 +6,20 @@
 # Unique ID of this mod. Pick something long enough that it'll never be the same as any other mod.
 # The name displayed in the mod management menu is separate from this, but this should still be human readable
 # as it will show up in missing dependency errors.
-id = "bk_recomp_asset_replacer"
+id = "bk_recomp_asset_expansion_pak"
 
 # Version of this mod.
 version = "0.0.1"
 
 # The name that will show up for this mod in the mod menu. This should be human readable.
-display_name = "Asset Replacer"
+display_name = "Asset Expansion Pak"
 
 # The description that will show up when this mod is displayed in the mod menu. This should be human readable.
-description =  "Experimental asset replacement API mod."
+description =  "Experimental mod that rewrites the asset management system of the game to allow direct asset in-memory replacements by other mods. It also extends the game's asset system to use a much bigger allocation heap."
 
 # A short description that will show up in this mod's entry in the mod list. This should be human readable and kept short
 # to prevent it from being cut off due to the limited space.
-short_description = "Experimental asset replacement API mod."
+short_description = "Expand the game's asset memory system."
 
 # Authors of this mod.
 authors = [ "Darío" ]
@@ -56,11 +56,11 @@ native_libraries = [
 elf_path = "build/mod.elf"
 
 # Output mod filename.
-mod_filename = "bk_recomp_asset_replacer"
+mod_filename = "bk_recomp_asset_expansion_pak"
 
 # Reference symbol files.
 func_reference_syms_file = "BanjoRecompSyms/bk.us.rev0.syms.toml"
 data_reference_syms_files = [ "BanjoRecompSyms/bk.us.rev0.datasyms.toml" ]
 
 # Additional files to include in the mod.
-additional_files = [ ]
+additional_files = [ "thumb.dds" ]
