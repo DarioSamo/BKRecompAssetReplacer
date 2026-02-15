@@ -12,8 +12,15 @@ The following exports are available to other mods to register in-memory replacem
 
 If another mod tries to register the same replacement, no conflict resolution is provided: it'll be up entirely to the order the mods call the API to determine who gets to replace the asset.
 
+The size version of the function is provided for mods that need to replace assets retrieved with the function that copies the asset into a destination pointer. On the regular version of the game, this is only used by two types of assets:
+- The furnace fun questions (`ASSET_*_FF_QUIZ_QUESTION`).
+- `SPRITE_BOLD_FONT_NUMBERS_ALPHAMASK` and `SPRITE_BOLD_FONT_LETTERS_ALPHAMASK`.
+
+The size is necessary to know how many bytes to copy from the asset into the destination pointer safely.
+
 ```
 RECOMP_EXPORT void bk_recomp_aep_register_replacement(enum asset_e asset_id, void *asset_data);
+RECOMP_EXPORT void bk_recomp_aep_register_replacement_with_size(enum asset_e asset_id, void *asset_data, u32 asset_size);
 RECOMP_EXPORT void bk_recomp_aep_unregister_replacement(enum asset_e asset_id);
 ```
 

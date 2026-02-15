@@ -34,14 +34,16 @@ s32 rarezip_get_uncompressed_size(u8 *arg0);
 #define ASSET_REPLACEMENT_HEAP_SIZE 0x800000
 
 void *asset_replacements_data[MAX_ASSETS];
-u16 asset_replacements_indices[MAX_ASSETS];
+u16 asset_replacements_data_indices[MAX_ASSETS];
+u32 asset_replacements_size[MAX_ASSETS];
 u16 asset_replacements_active = 0;
 u8 asset_replacement_heap_memory[ASSET_REPLACEMENT_HEAP_SIZE] __attribute__((aligned(0x10)));
 O1HeapInstance *asset_replacement_heap_instance;
 
 RECOMP_HOOK("assetCache_init") void assetCache_init_hook(void) {
     for (u16 i = 0; i < MAX_ASSETS; i++) {
-        asset_replacements_indices[i] = MAX_ASSETS;
+        asset_replacements_data_indices[i] = MAX_ASSETS;
+        asset_replacements_size[i] = 0;
     }
 
     asset_replacement_heap_instance = o1heapInit(&asset_replacement_heap_memory[0], ASSET_REPLACEMENT_HEAP_SIZE);
@@ -89,11 +91,17 @@ u16 get_asset_replacement_data_index(void *asset_data) {
 }
 
 RECOMP_EXPORT void bk_recomp_aep_register_replacement(enum asset_e asset_id, void *asset_data) {
-    asset_replacements_indices[asset_id] = insert_asset_replacement_data(asset_data);
+    asset_replacements_data_indices[asset_id] = insert_asset_replacement_data(asset_data);
+    asset_replacements_size[asset_id] = 0;
+}
+
+RECOMP_EXPORT void bk_recomp_aep_register_replacement_with_size(enum asset_e asset_id, void *asset_data, u32 asset_size) {
+    asset_replacements_data_indices[asset_id] = insert_asset_replacement_data(asset_data);
+    asset_replacements_size[asset_id] = asset_size;
 }
 
 RECOMP_EXPORT void bk_recomp_aep_unregister_replacement(enum asset_e asset_id) {
-    u16 replacement_index = asset_replacements_indices[asset_id];
+    u16 replacement_index = asset_replacements_data_indices[asset_id];
     if (replacement_index < MAX_ASSETS) {
         asset_replacements_active--;
 
@@ -102,7 +110,8 @@ RECOMP_EXPORT void bk_recomp_aep_unregister_replacement(enum asset_e asset_id) {
         }
     }
 
-    asset_replacements_indices[asset_id] = MAX_ASSETS;
+    asset_replacements_data_indices[asset_id] = MAX_ASSETS;
+    asset_replacements_size[asset_id] = 0;
 }
 
 void *bk_recomp_aep_malloc(s32 size) {
@@ -123,9 +132,9 @@ void *bk_recomp_aep_realloc(void *ptr, s32 size) {
 // @mod Modded to skip asset extraction and return the in-memory replacement if it exists.
 RECOMP_PATCH void *assetcache_get(enum asset_e assetId) {
     // @mod If a replacement was made for this asset by another mod, return it instead of extracting it from the game.
-    if (asset_replacements_indices[assetId] < MAX_ASSETS) {
-        u16 replacement_index = asset_replacements_indices[assetId];
-        return asset_replacements_data[replacement_index];
+    if (asset_replacements_data_indices[assetId] < MAX_ASSETS) {
+        u16 replacement_data_index = asset_replacements_data_indices[assetId];
+        return asset_replacements_data[replacement_data_index];
     }
 
     s32 comp_size;//sp_44
@@ -266,4 +275,90 @@ RECOMP_PATCH void *defrag_asset(void *arg0){
     assetcache_update_ptr(arg0, sp1C);
     return sp1C;
 #endif
+}
+
+RECOMP_PATCH s32 code_B3A80_func_8033BDAC(enum asset_e id, void *dst, s32 size) {
+    // @mod If a replacement was made for this asset by another mod, return it instead of extracting it from the game.
+    if (asset_replacements_data_indices[id] < MAX_ASSETS) {
+        u32 replacement_size = asset_replacements_size[id];
+        if (replacement_size > 0) {
+            u16 replacement_data_index = asset_replacements_data_indices[id];
+            void *replacement_data = asset_replacements_data[replacement_data_index];
+            size = MIN(size, (s32)replacement_size);
+            if (dst != replacement_data) {
+                // In some cases, the game will pass the asset pointer to this function instead of its own allocated memory.
+                memcpy(dst, replacement_data, size);
+            }
+
+            return size;
+        }
+        else {
+            recomp_printf("Asset 0x%X could not be replaced because it was called by a function that needs the asset's size.\nPlease use bk_recomp_aep_register_replacement_with_size to register this asset instead.\n", id);
+        }
+    }
+
+    s32 comp_size;
+    s32 var_s0;
+    s32 sp34;
+    s32 phi_v0;
+    s32 comp_ptr;
+    u8 sp2B;
+    s32 sp20;
+
+    //find asset in cache
+    for(phi_v0 = 0; phi_v0 < assetCacheLength && id != assetCacheAssetIdList[phi_v0]; phi_v0++);
+    assetCacheCurrentIndex = phi_v0;
+    if (phi_v0 == 150) { //asset not in cache
+        return 0;
+    }
+    comp_ptr = assetSectionRomMetaList[id + 1].offset - assetSectionRomMetaList[id].offset;
+    if (comp_ptr & 1) {
+        comp_ptr++;
+    }
+    sp34 = comp_ptr;
+        
+    if (assetSectionRomMetaList[id].compFlag & 1) {
+        func_8033BAB0(id, 0, 0x10, &D_80383CB0);
+        assetCacheCurrentSize = rarezip_get_uncompressed_size(&D_80383CB0);
+
+        // get aligned uncompressed size
+        var_s0 = assetCacheCurrentSize;
+        if (var_s0 & 0xF) {
+            var_s0 = (var_s0 - (var_s0 & 0xF)) + 0x10;
+        }
+
+        if (size >= (comp_ptr + var_s0)) {
+            sp2B = 1;
+            comp_ptr = (s32)dst + var_s0;
+        }
+        else if(size >= var_s0) {
+            sp2B = 2;
+            comp_ptr = (s32)malloc(comp_ptr);
+        }
+        else{
+            return 0;
+        }
+    }
+    else{
+        var_s0 = comp_ptr;
+        if(comp_ptr & (0x10 -1)) 
+           var_s0 = (comp_ptr - (comp_ptr & (0x10 -1))) + 0x10;
+        
+        if(size >= comp_ptr){
+            comp_ptr = (s32)dst;
+        }
+        else{
+            return 0;
+        }
+    }
+    comp_size = assetSectionRomMetaList[id].offset + D_80383CCC;
+    piMgr_read((void *)comp_ptr, comp_size, sp34);
+    if (assetSectionRomMetaList[id].compFlag & 1) {
+        rarezip_inflate((u8 *)comp_ptr, dst);
+        osWritebackDCache(dst, assetCacheCurrentSize);
+        if (sp2B == 2) {
+            free((void *)comp_ptr);
+        }
+    }
+    return var_s0;
 }
